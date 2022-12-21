@@ -1,66 +1,50 @@
-/*!
- *@file getVoltageCurrentPower.ino
- *@brief Get the current, voltage, and power of electronic devices.
- *@copyright   Copyright (c) 2010 DFRobot Co.Ltd (http://www.dfrobot.com)
- *@license     The MIT license (MIT)
- *@author [fengli](li.feng@dfrobot.com)
- *@version  V1.0
- *@date  2022-3-1
- *@url https://github.com/DFRobot/DFRobot_INA219
-*/
-
 #include <Wire.h>
-#include "DFRobot_INA219.h"
 #include <Arduino.h>
-
-/**
- * @fn DFRobot_INA219_IIC
- * @brief pWire I2C controller pointer
- * @param i2caddr  I2C address
- * @n INA219_I2C_ADDRESS1  0x40   A0 = 0  A1 = 0
- * @n INA219_I2C_ADDRESS2  0x41   A0 = 1  A1 = 0
- * @n INA219_I2C_ADDRESS3  0x44   A0 = 0  A1 = 1
- * @n INA219_I2C_ADDRESS4  0x45   A0 = 1  A1 = 1	 
-  */
-
-DFRobot_INA219_IIC ina219(&Wire, INA219_I2C_ADDRESS1);
-
-// Revise the following two paramters according to actual reading of the INA219 and the multimeter
-// for linearly calibration
-float ina219Reading_mA = 1000;
-float extMeterReading_mA = 1000;
 
 void setup(void) 
 {
     Serial.begin(115200);
-    //Open the serial port
-    while(!Serial);
-    
-    Serial.println();
-    //Initialize the sensor
-    while(ina219.begin() != true) {
-        Serial.println("INA219 begin failed.");
-        delay(2000);
-    }
-    //Linear calibration
-    ina219.linearCalibrate(/*The measured current before calibration*/ina219Reading_mA, /*The current measured by other current testers*/extMeterReading_mA);
-    Serial.println();
+    Wire.begin(16,17);
+    Serial.println("Starting scanning.");
 }
 
-void loop(void)
+void loop()
 {
-    Serial.print("BusVoltage:   ");
-    Serial.print(ina219.getBusVoltage_V(), 2);
-    Serial.println("V");
-    Serial.print("ShuntVoltage: ");
-    Serial.print(ina219.getShuntVoltage_mV(), 3);
-    Serial.println("mV");
-    Serial.print("Current:      ");
-    Serial.print(ina219.getCurrent_mA(), 1);
-    Serial.println("mA");
-    Serial.print("Power:        ");
-    Serial.print(ina219.getPower_mW(), 1);
-    Serial.println("mW");
-    Serial.println("");
-    delay(1000);
+  byte error, address; //variable for error and I2C address
+  int nDevices = 0;
+
+
+  for (address = 8; address < 120; address++ )
+  {
+    // The i2c_scanner uses the return value of
+    // the Write.endTransmisstion to see if
+    // a device did acknowledge to the address.
+    Wire.beginTransmission(address);
+    error = Wire.endTransmission();
+
+    if (error == 0)
+    {
+      Serial.print("I2C device found at address 0x");
+      if (address < 16)
+        Serial.print("0");
+      Serial.print(address, HEX);
+      Serial.println("  !");
+      nDevices++;
+    }
+    else if (error == 4)
+    {
+      Serial.print("Unknown error at address 0x");
+      if (address < 16)
+        Serial.print("0");
+      Serial.println(address, HEX);
+    }
+  }
+  if (nDevices == 0)
+    Serial.println("No I2C devices found\n");
+  else
+    Serial.println("done\n");
+  
+   Serial.println("In loop.");
+
+  delay(5000); // wait 5 seconds for the next I2C scan
 }
